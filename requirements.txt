@@ -1,2 +1,6 @@
-# Use black for auto-formatting
+# Essential
+gym
+
+# Optional
 black
+ipykernel

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import gym
-from measure_following_game.similarity import SimilarityProviderBase
-from .reward import RewardBase
 import numpy as np
+
+from .reward import RewardBase
+from .similarity.provider import SimilarityProviderBase
 
 
 __all__ = ["MeasureFollowingEnv"]

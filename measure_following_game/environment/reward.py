@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from abc import abstractmethod
+import abc
 
 
 class RewardBase(object):
-    @abstractmethod
+    @abc.abstractmethod
     def __call__(self, true_measure: int, pred_measure: int) -> float:
         raise NotImplementedError
 

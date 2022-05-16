@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 
 import gym
-import numpy as np
-
 from measure_following_game.similarity import SimilarityProviderBase
+from .reward import RewardBase
+import numpy as np
 
 
 __all__ = ["MeasureFollowingEnv"]
 
 
 class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
-    def __init__(self, provider: SimilarityProviderBase):
+    def __init__(self, reward: RewardBase, provider: SimilarityProviderBase):
+        self.reward = reward
         self.provider = provider
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, dict]:
-        similarity_matrix, true_measure, is_done = self.provider.step(action)
-        ...
+        similarity_matrix, true_measure, done = self.provider.step(action)
+        reward = self.reward(true_measure, action)
+        return similarity_matrix, reward, done, {}
 
     def reset(
         self,

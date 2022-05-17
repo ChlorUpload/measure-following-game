@@ -12,15 +12,14 @@ __all__ = ["MeasureFollowingEnv"]
 
 
 class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
-    def __init__(self, reward: RewardBase, provider: SimilarityProviderBase):
+    def __init__(self, provider: SimilarityProviderBase, reward: RewardBase):
+        self.provider = provider
+        self.window_shape = (provider.window_size, provider.num_features)
+        self.action_space = spaces.Discrete(n=self.window_shape[0])
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=self.window_shape)
+        self.metadata["render_modes"] = provider.metadata["render_modes"]
         self.reward = reward
         self.reward_range = self.reward.range
-        self.provider = provider
-        window_size = self.provider.window_size
-        num_features = self.provider.num_features
-        self.action_space = spaces.Discrete(window_size)
-        self.observation_space = spaces.Box(0.0, 1.0, (window_size, num_features))
-        self.metadata["render_modes"] = self.provider.metadata["render_modes"]
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, dict]:
         assert self.action_space.contains(action)

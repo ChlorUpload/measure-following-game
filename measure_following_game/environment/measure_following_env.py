@@ -17,15 +17,15 @@ class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
         self.window_shape = (provider.window_size, provider.num_features)
         self.action_space = spaces.Discrete(n=self.window_shape[0])
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=self.window_shape)
-        self.metadata["render_modes"] = provider.metadata["render_modes"]
+        self.metadata |= provider.metadata
         self.reward = reward
         self.reward_range = self.reward.range
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, dict]:
         assert self.action_space.contains(action)
-        similarity_matrix, true_measure, done = self.provider.step(action)
+        similarity_matrix, true_measure, done, info = self.provider.step(action)
         reward = self.reward(true_measure, action)
-        return similarity_matrix, reward, done, {}
+        return similarity_matrix, reward, done, info
 
     def reset(
         self,
@@ -38,7 +38,6 @@ class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
         return self.provider.reset(seed=seed, return_info=return_info, options=options)
 
     def render(self, mode: str):
-        assert mode in self.metadata["render_modes"]
         self.provider.render(mode)
 
     def close(self):

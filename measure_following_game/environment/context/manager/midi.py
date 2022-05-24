@@ -5,7 +5,7 @@ from os import PathLike
 from pathlib import Path
 from sabanamusic.common import MIDIRecordBase
 from sabanamusic.similarity import *
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from measure_following_game.environment.context.manager.base import ContextManagerBase
 
@@ -15,7 +15,6 @@ __all__ = ["MIDIContextManager"]
 
 class MIDIContextManager(ContextManagerBase):
 
-    metadata: ClassVar[dict] = {"render_modes": ["human"]}
     num_features: ClassVar[int] = 3
 
     def __init__(
@@ -34,8 +33,9 @@ class MIDIContextManager(ContextManagerBase):
         self.record = record
         self.threshold = threshold
 
-    def _make_similarity_matrix(self) -> np.ndarray:
-        similarity_matrix = np.zeros(self.window_shape, dtype=np.float32)
+    def _fill_similarity_matrix(self):
+        similarity_matrix = self.similarity_matrix
+        similarity_matrix.fill(0.0)
 
         record = self.record
         record_num_frames = record.num_frames
@@ -58,16 +58,14 @@ class MIDIContextManager(ContextManagerBase):
             similarity_matrix[idx, 1] = head / (record_num_frames - 1)
             similarity_matrix[idx, 2] = (tail - head) / record_num_frames
 
-        return similarity_matrix
-
     def _step_core(self) -> tuple[np.ndarray, int, dict]:
         if self.done:
             return -np.ones(self.window_shape, dtype=np.float32), -1, {"done": True}
         else:
-            true_measure = self.record.true_measure
+            self.true_measure = self.record.true_measure
             self.record.step()  # TODO(kaparoo): need implementation
-            similarity_matrix = self._make_similarity_matrix()
-            return similarity_matrix, true_measure, {}
+            self._fill_similarity_matrix()
+            return self.similarity_matrix, self.true_measure, {}
 
     def _mock_history(self):
         # TODO(kaparoo): FIX HERE
@@ -76,18 +74,10 @@ class MIDIContextManager(ContextManagerBase):
         self.window_head = 0
         self.num_measures_in_window = self.window_size
 
-    def _reset_core(self, *, **kwargs) -> np.ndarray | tuple[np.ndarray, dict]:
+    def _reset_core(self, *, **kwargs):
         self._mock_history()
         self.record.reset()  # TODO(kaparoo): need implementation
-        similarity_matrix = self._make_similarity_matrix()
-        return similarity_matrix
-
-    def render(self, mode: str):
-        match mode:
-            case "human":
-                ...
-            case _:
-                raise KeyError(f"Unsupported mode: {mode}")
+        self._fill_similarity_matrix()
 
     def close(self):
         super(MIDIContextManager, self).close()

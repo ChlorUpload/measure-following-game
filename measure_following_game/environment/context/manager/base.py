@@ -7,13 +7,15 @@ from pathlib import Path
 from sabanamusic.common import Measure, make_score_measures
 from typing import ClassVar, Literal
 
+from measure_following_game.environment.context.renderer import ContextRenderer
+
 
 __all__ = ["ContextManagerBase"]
 
 
 class ContextManagerBase(object):
 
-    metadata: ClassVar[dict] = {"render_modes": []}
+    metadata: ClassVar[dict] = {"render_modes": ["human", "rgb_array"]}
     num_features: ClassVar[int] = 1
 
     def __init__(
@@ -32,6 +34,8 @@ class ContextManagerBase(object):
         )
         self.num_measures_in_score = len(self.score_measures)
 
+        self.renderer = ContextRenderer(score_root=score_root)
+
         if window_size > self.num_measures_in_score:
             raise ValueError("`window_size` cannot exceed number of measures in score")
 
@@ -44,11 +48,20 @@ class ContextManagerBase(object):
         self.global_history: list[int] = []
         self.done = False
 
+        self.similarity_matrix = np.zeros(self.window_shape, dtype=np.float32)
+        self.true_measure: int | None = None
+        self.pred_measure: int | None = None
+
     @property
-    def window(self) -> list[Measure]:
+    def measure_range(self) -> tuple[int, int]:
         assert 0 < self.num_measures_in_window <= self.window_size
         window_tail = self.window_head + self.num_measures_in_window
-        return self.score_measures[self.window_head : window_tail]
+        return (self.window_head, window_tail)
+
+    @property
+    def window(self) -> list[Measure]:
+        window_head, window_tail = self.measure_range
+        return self.score_measures[window_head:window_tail]
 
     def get_history(self, mode: Literal["global", "local"] = "local") -> list[int]:
         if mode == "global":
@@ -67,11 +80,11 @@ class ContextManagerBase(object):
             raise KeyError(f"Unsupported mode: {mode}")
 
     def step(self, pred_measure: int) -> tuple[np.ndarray, int, bool, dict]:
-        pred_measure = np.clip(pred_measure, 0, self.num_measures_in_window)
-        self.local_history.append(pred_measure)
-        self.global_history.append(pred_measure + self.window_head)
-        similarity_matrix, true_measure, info = self._step_core()
-        return similarity_matrix, true_measure, self.done, info
+        self.pred_measure = np.clip(pred_measure, 0, self.num_measures_in_window)
+        self.local_history.append(self.pred_measure)
+        self.global_history.append(self.pred_measure + self.window_head)
+        self._step_core()
+        return self.similarity_matrix, self.true_measure, self.done, {}
 
     def reset(
         self,
@@ -81,10 +94,12 @@ class ContextManagerBase(object):
         options: dict | None = None,
     ) -> np.ndarray | tuple[np.ndarray, dict]:
         self.done = False
-        return self._reset_core(seed=seed, return_info=return_info, options=options)
+        self._reset_core(seed=seed, return_info=return_info, options=options)
+        self.renderer.reset(self.measure_range)
+        return self.similarity_matrix
 
     @abstractmethod
-    def _step_core(self) -> tuple[np.ndarray, int, dict]:
+    def _step_core(self):
         ...
 
     @abstractmethod
@@ -94,12 +109,19 @@ class ContextManagerBase(object):
         seed: int | None = None,
         return_info: bool = False,
         options: dict | None = None,
-    ) -> np.ndarray | tuple[np.ndarray, dict]:
+    ):
         ...
 
-    @abstractmethod
-    def render(self, mode: str):
-        ...
+    def render(self, mode: Literal["human", "rgb_array"] = "human"):
+        if mode not in self.metadata["render_modes"]:
+            raise KeyError(f"Unsupported mode: {mode}")
+        self.renderer.render(
+            measure_range=self.measure_range,
+            true_measure=self.true_measure,
+            pred_measure=self.pred_measure,
+            similarity_matrix=self.similarity_matrix,
+            mode=mode,
+        )
 
     def close(self):
         del self.score_measures

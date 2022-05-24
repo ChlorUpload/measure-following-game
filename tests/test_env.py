@@ -3,13 +3,15 @@
 from gym import spaces
 from measure_following_game.environment import *
 import numpy as np
+from pathlib import Path
 import unittest
 
 
 class EnvTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        provider = SimilarityProviderBase(window_size=10)
+        score_root = Path(__file__).parent / "samples"
+        provider = ContextManagerBase(score_root, window_size=10)
         reward = RewardBase()
         cls.env = MeasureFollowingEnv(provider, reward)
 

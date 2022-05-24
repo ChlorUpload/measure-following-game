@@ -35,10 +35,18 @@ class ContextManagerBase(object):
 
         self.window_head = 0
         self.window_size = window_size
+        self.window_shape = (self.window_size, self.num_features)
         self.num_measures_in_window = window_size
+
         self.local_history: list[int] = []
         self.global_history: list[int] = []
         self.done = False
+
+    @property
+    def window(self) -> list[Measure]:
+        assert 0 < self.num_measures_in_window <= self.window_size
+        window_tail = self.window_head + self.num_measures_in_window
+        return self.score_measures[self.window_head : window_tail]
 
     def get_history(self, mode: Literal["global", "local"] = "local") -> list[int]:
         if mode == "global":
@@ -60,7 +68,6 @@ class ContextManagerBase(object):
         pred_measure = np.clip(pred_measure, 0, self.num_measures_in_window)
         self.local_history.append(pred_measure)
         self.global_history.append(pred_measure + self.window_head)
-        self._slide_or_stay()
         similarity_matrix, true_measure, info = self._step_core()
         return similarity_matrix, true_measure, self.done, info
 
@@ -72,18 +79,10 @@ class ContextManagerBase(object):
         options: dict | None = None,
     ) -> np.ndarray | tuple[np.ndarray, dict]:
         self.done = False
-        self.window_head = 0
-        self.num_measures_in_window = self.window_size
-        self.local_context = []
-        self.global_context = []
         return self._reset_core(seed=seed, return_info=return_info, options=options)
 
     @abstractmethod
-    def _slide_or_stay(self):
-        ...
-
-    @abstractmethod
-    def _step_core(self):
+    def _step_core(self) -> tuple[np.ndarray, int, dict]:
         ...
 
     @abstractmethod
@@ -100,9 +99,8 @@ class ContextManagerBase(object):
     def render(self, mode: str):
         ...
 
-    @abstractmethod
     def close(self):
-        ...
+        del self.score_measures
 
     def __del__(self):
         self.close()

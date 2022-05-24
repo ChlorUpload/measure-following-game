@@ -14,7 +14,7 @@ __all__ = ["MeasureFollowingEnv"]
 class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
     def __init__(self, manager: ContextManagerBase, reward: RewardBase):
         self.manager = manager
-        self.window_shape = (manager.window_size, manager.num_features)
+        self.window_shape = self.manager.window_shape
         self.action_space = spaces.Discrete(n=self.window_shape[0])
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=self.window_shape)
         self.metadata |= manager.metadata

@@ -1,7 +1,8 @@
 # Essential
 beartype
+black
+git+https://github.com/sabana-music-lab/sabana-lib
 gym
 
 # Optional
-black
 ipykernel

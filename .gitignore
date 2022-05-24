@@ -1,5 +1,8 @@
 ### Etc. ###
 
+# private files
+private/*
+
 # virtual environments
 .venv*
 

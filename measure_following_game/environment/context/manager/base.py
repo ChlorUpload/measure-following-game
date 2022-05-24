@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from abc import abstractmethod
-import gc
 import numpy as np
 from os import PathLike
 from pathlib import Path
@@ -33,10 +32,13 @@ class ContextManagerBase(object):
         )
         self.num_measures_in_score = len(self.score_measures)
 
+        if window_size > self.num_measures_in_score:
+            raise ValueError("`window_size` cannot exceed number of measures in score")
+
         self.window_head = 0
         self.window_size = window_size
         self.window_shape = (self.window_size, self.num_features)
-        self.num_measures_in_window = window_size
+        self.num_measures_in_window = self.window_size
 
         self.local_history: list[int] = []
         self.global_history: list[int] = []

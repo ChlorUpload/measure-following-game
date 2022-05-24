@@ -4,6 +4,7 @@ from abc import abstractmethod
 from beartype import beartype
 from beartype.vale import Is
 import numpy as np
+from sabanamusic.typing import Index
 from typing import Annotated, ClassVar
 
 
@@ -11,7 +12,6 @@ __all__ = ["RewardBase", "TriangleReward", "WeightedTriangleReward"]
 
 
 Size = Annotated[int, Is[lambda x: x > 0]]
-Index = Annotated[int, Is[lambda x: x >= 0]]
 Decimal = Annotated[int | float, Is[lambda x: 0.0 <= x <= 1.0]]
 
 

@@ -34,7 +34,6 @@ class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
         return_info: bool = False,
         options: dict | None = None
     ) -> np.ndarray | tuple[np.ndarray, dict]:
-        super(MeasureFollowingEnv, self).reset(seed=seed)  # reset self._np_random
         return self.manager.reset(seed=seed, return_info=return_info, options=options)
 
     def render(self, mode: str) -> np.ndarray | None:

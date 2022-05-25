@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from os import PathLike
-from pathlib import Path
+from beartype import beartype
+from sabanamusic.common import MIDIRecord
 from sabanamusic.similarity import *
+from sabanamusic.typing import PathLike, PositiveFloat, PositiveInt
 from typing import ClassVar
 
 from measure_following_game.environment.context.manager.base import ContextManagerBase
-from measure_following_game.environment.context.manager._record import MIDIRecord
+from measure_following_game.environment.context.renderer import ContextRenderer
 
 
 __all__ = ["MIDIContextManager"]
@@ -14,22 +15,29 @@ __all__ = ["MIDIContextManager"]
 
 class MIDIContextManager(ContextManagerBase):
 
-    num_features: ClassVar[int] = 3
+    num_features: ClassVar[PositiveInt] = 3
 
+    @beartype
     def __init__(
         self,
-        score_root: str | Path | PathLike,
+        score_root: PathLike,
         record: MIDIRecord,
+        renderer: ContextRenderer,
         *,
-        fps: int = 20,
+        fps: PositiveInt = 20,
         onset_only: bool = True,
-        window_size: int = 10,
-        threshold: float = 0.33,
+        window_size: PositiveInt = 32,
+        threshold: PositiveFloat = 0.33,
     ):
         super(MIDIContextManager, self).__init__(
-            score_root, record, fps=fps, onset_only=onset_only, window_size=window_size
+            score_root,
+            record,
+            renderer,
+            fps=fps,
+            onset_only=onset_only,
+            window_size=window_size,
         )
-        self.threshold = threshold  # for normalizing similarities
+        self.threshold = threshold
 
     def _fill_similarity_matrix(self):
         similarity_matrix = self.similarity_matrix

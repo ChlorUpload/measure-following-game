@@ -20,7 +20,7 @@ class RewardBase(object):
 
     @abstractmethod
     def __call__(self, true_measure: Index, pred_measure: Index) -> float:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class TriangleReward(RewardBase):

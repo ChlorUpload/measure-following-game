@@ -27,7 +27,7 @@ class ContextRenderer(object):
         true_measure: int | None = None,
         pred_measure: int | None = None,
         mode: Literal["human", "rgb_array"] = "human",
-    ):
+    ) -> np.ndarray | None:
         similarities = [float(similarity) for similarity in similarity_matrix[:, 0]]
 
     def close(self):

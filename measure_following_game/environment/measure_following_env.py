@@ -37,8 +37,8 @@ class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
         super(MeasureFollowingEnv, self).reset(seed=seed)  # reset self._np_random
         return self.manager.reset(seed=seed, return_info=return_info, options=options)
 
-    def render(self, mode: str):
-        self.manager.render(mode)
+    def render(self, mode: str) -> np.ndarray | None:
+        return self.manager.render(mode)
 
     def close(self):
         self.manager.close()

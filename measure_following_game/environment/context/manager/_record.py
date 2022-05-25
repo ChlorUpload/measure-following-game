@@ -77,18 +77,18 @@ class MIDIRecord(RecordBase):
 
         self.record_annotations = pd.read_csv(record_annotation_path)
 
-    @beartype
     @property
+    @beartype
     def cursor(self) -> Index:
         return self._cursor
 
-    @beartype
     @cursor.setter
+    @beartype
     def cursor(self, val: Index):
         self._cursor = np.clip(val, 0, self.max_cursor)
 
-    @beartype
     @property
+    @beartype
     def current_record(self) -> MIDIMatrix:
         return self.entire_record[:, self.cursor : self.cursor + self.num_frames]
 
@@ -121,13 +121,13 @@ class MIDIRecord(RecordBase):
 
 # TODO(kaparoo): need implementation
 class StaticMIDIRecord(MIDIRecord):
-    @beartype
     @property
+    @beartype
     def done(self) -> bool:
         return self.cursor > self.max_cursor
 
-    @beartype
     @property
+    @beartype
     def true_measure(self) -> Index:
         ...
 
@@ -161,13 +161,13 @@ class DynamicMIDIRecord(MIDIRecord):
         )
         self._done = False
 
-    @beartype
     @property
+    @beartype
     def done(self) -> bool:
         return self._done
 
-    @beartype
     @property
+    @beartype
     def true_measure(self) -> Index:
         ...
 

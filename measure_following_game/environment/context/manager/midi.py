@@ -28,10 +28,10 @@ class MIDIContextManager(ContextManagerBase):
         threshold: float = 0.33,
     ):
         super(MIDIContextManager, self).__init__(
-            score_root, fps=fps, onset_only=onset_only, window_size=window_size
+            score_root, record, fps=fps, onset_only=onset_only, window_size=window_size
         )
         self.record = record
-        self.threshold = threshold
+        self.threshold = threshold  # for normalizing similarities
 
     def _fill_similarity_matrix(self):
         similarity_matrix = self.similarity_matrix
@@ -57,28 +57,3 @@ class MIDIContextManager(ContextManagerBase):
             similarity_matrix[idx, 0] = calc_algorithmic_similarity((timewarping_distance, euclidean_distance), threshold)
             similarity_matrix[idx, 1] = head / (record_num_frames - 1)
             similarity_matrix[idx, 2] = (tail - head) / record_num_frames
-
-    def _step_core(self) -> tuple[np.ndarray, int, dict]:
-        if self.done:
-            return -np.ones(self.window_shape, dtype=np.float32), -1, {"done": True}
-        else:
-            self.true_measure = self.record.true_measure
-            self.record.step()  # TODO(kaparoo): need implementation
-            self._fill_similarity_matrix()
-            return self.similarity_matrix, self.true_measure, {}
-
-    def _mock_history(self):
-        # TODO(kaparoo): FIX HERE
-        self.local_history = [0]
-        self.global_history = [0]
-        self.window_head = 0
-        self.num_measures_in_window = self.window_size
-
-    def _reset_core(self, *, **kwargs):
-        self._mock_history()
-        self.record.reset()  # TODO(kaparoo): need implementation
-        self._fill_similarity_matrix()
-
-    def close(self):
-        super(MIDIContextManager, self).close()
-        del self.record

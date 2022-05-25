@@ -19,13 +19,13 @@ __all__ = ["RecordBase", "MIDIRecord", "StaticMIDIRecord", "DynamicMIDIRecord"]
 
 
 class RecordBase(ABC):
-    @abstractmethod
     @property
+    @abstractmethod
     def done(self) -> bool:
         ...
 
-    @abstractmethod
     @property
+    @abstractmethod
     def true_measure(self) -> Index:
         ...
 

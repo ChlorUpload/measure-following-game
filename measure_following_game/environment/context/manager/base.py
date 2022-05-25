@@ -4,11 +4,11 @@ from abc import abstractmethod
 import numpy as np
 from os import PathLike
 from pathlib import Path
-from sabanamusic.common import make_score_measures, Measure, MIDIRecordBase
+from sabanamusic.common import make_score_measures, Measure
 from typing import ClassVar, Literal
 
+from measure_following_game.environment.context.manager._record import RecordBase
 from measure_following_game.environment.context.renderer import ContextRenderer
-
 
 __all__ = ["ContextManagerBase"]
 
@@ -21,7 +21,7 @@ class ContextManagerBase(object):
     def __init__(
         self,
         score_root: str | Path | PathLike,
-        record: MIDIRecordBase,
+        record: RecordBase,
         *,
         fps: int = 20,
         onset_only: bool = True,
@@ -68,11 +68,17 @@ class ContextManagerBase(object):
 
     @property
     def info(self) -> dict:
-        return {"measure_range": self.measure_range,
-                "cursor": {"global": self.get_cursor(mode="global"),
-                           "local": self.get_cursor(mode="local")},
-                "history": {"global": self.get_history(mode="global"),
-                            "local": self.get_history(mode="local")}}
+        return {
+            "measure_range": self.measure_range,
+            "cursor": {
+                "global": self.get_cursor(mode="global"),
+                "local": self.get_cursor(mode="local"),
+            },
+            "history": {
+                "global": self.get_history(mode="global"),
+                "local": self.get_history(mode="local"),
+            },
+        }
 
     def get_history(self, mode: Literal["global", "local"] = "local") -> list[int]:
         if mode == "global":
@@ -92,33 +98,40 @@ class ContextManagerBase(object):
 
     @abstractmethod
     def _fill_similarity_matrix(self):
-        ...
+        raise NotImplementedError()
 
+    # TODO(kaparoo): need implementation
     def _slide_or_stay(self):
-        ...
+        played_measures = set(self.local_history)
 
     def step(self, pred_measure: int) -> tuple[np.ndarray, int, bool, dict]:
         self.pred_measure = np.clip(pred_measure, 0, self.num_measures_in_window)
         self.local_history.append(self.pred_measure)
         self.global_history.append(self.pred_measure + self.window_head)
-        
+
         if self.done:
             self.true_measure = -1
             self.similarity_matrix.fill(-1.0)
         else:
             self.true_measure = self.record.true_measure - self.window_head
-            self._slide_or_stay() # TODO(kaparoo): need implementation
-            self.record.step()  # TODO(kaparoo): need implementation
+            self._slide_or_stay()
+
+            # TODO(kaparoo): need implementation
+            self.record.step()
+
             self._fill_similarity_matrix()
+            self.done = self.record.done
 
         return self.similarity_matrix, self.true_measure, self.done, self.info
 
-    def _mock_history(self):
-        # TODO(kaparoo): FIX HERE
-        self.local_history = [0]
-        self.global_history = [0]
+    # TODO(kaparoo): need implementation for `start_measure` and `mock`
+    def _init_window_and_history(
+        self, start_measure: int = 0, mock: bool = False, seed: int | None = None
+    ):
         self.window_head = 0
         self.num_measures_in_window = self.window_size
+        self.local_history = []
+        self.global_history = []
 
     def reset(
         self,
@@ -127,20 +140,31 @@ class ContextManagerBase(object):
         return_info: bool = False,
         options: dict | None = None,
     ) -> np.ndarray | tuple[np.ndarray, dict]:
-        self.done = False
-        self._mock_history()
-        self.record.reset()  # TODO(kaparoo): need implementation
+        start_measure, mock = 0, False
+        if isinstance(options, dict):
+            if "start_measure" in options:
+                start_measure = options["start_measure"]
+            if "mock" in options:
+                mock = options["mock"]
+        self._init_window_and_history(start_measure, mock, seed)
+
+        # TODO(kaparoo): need implementation
+        self.record.reset(measure_range=self.measure_range)
+
         self._fill_similarity_matrix()
+        self.done = self.record.done
 
         if return_info:
             return self.similarity_matrix, self.info
         else:
             return self.similarity_matrix
 
-    def render(self, mode: Literal["human", "rgb_array"] = "human"):
-        if mode not in self.metadata["render_modes"]:
+    def render(
+        self, mode: Literal["human", "rgb_array"] = "human"
+    ) -> np.ndarray | None:
+        if mode not in ("human", "rgb_array"):
             raise KeyError(f"Unsupported mode: {mode}")
-        self.renderer.render(mode=mode)
+        return self.renderer.render(mode=mode)
 
     def close(self):
         self.renderer.close()

@@ -5,14 +5,14 @@ import gym.spaces as spaces
 import numpy as np
 
 from measure_following_game.environment.context import ContextManagerBase
-from measure_following_game.environment.reward import RewardBase
+from measure_following_game.environment.rewards import Reward
 
 
 __all__ = ["MeasureFollowingEnv"]
 
 
 class MeasureFollowingEnv(gym.Env[np.ndarray, int]):
-    def __init__(self, manager: ContextManagerBase, reward: RewardBase):
+    def __init__(self, manager: ContextManagerBase, reward: Reward):
         self.manager = manager
         self.window_shape = self.manager.window_shape
         self.action_space = spaces.Discrete(n=self.window_shape[0])

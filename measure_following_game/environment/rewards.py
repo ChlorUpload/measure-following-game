@@ -25,6 +25,7 @@ class Reward(object):
     @beartype
     def __call__(self, true_action: int, pred_policies: ActType) -> float:
         assert pred_policies.shape == (self.num_actions,)
+        assert np.isclose(np.sum(pred_policies), 1.0)
 
         expected_reward = 0.0
         for pred_action, pred_prob in enumerate(pred_policies):

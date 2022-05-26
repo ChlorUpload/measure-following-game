@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from sabanamusic.typing import PositiveInt
 
-ActType = npt.NDArray[np.float32]
+from measure_following_game.types import ActType
 
 
 class Reward(object):
@@ -23,14 +23,11 @@ class Reward(object):
         self.num_actions = window_size + 2  # +2 for `slide` and `noop`
 
     @beartype
-    def __call__(self, true_action: int, pred_policies: ActType) -> float:
-        assert pred_policies.shape == (self.num_actions,)
-        assert np.isclose(np.sum(pred_policies), 1.0)
-
+    def __call__(self, true_action: int, pred_policy: ActType) -> float:
+        assert len(pred_policy) == self.num_actions
         expected_reward = 0.0
-        for pred_action, pred_prob in enumerate(pred_policies):
+        for pred_action, pred_prob in enumerate(pred_policy):
             expected_reward += pred_prob * self._calc_reward(true_action, pred_action)
-
         return expected_reward
 
     def _is_measure(self, action: int) -> bool:

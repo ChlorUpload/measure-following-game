@@ -1,69 +1,58 @@
 # -*- coding: utf-8 -*-
 
+__all__ = ["MIDIContextManager"]
+
+from typing import ClassVar
+
 from beartype import beartype
 from sabanamusic.common import MIDIRecord
 from sabanamusic.similarity import *
-from sabanamusic.typing import PathLike, PositiveFloat, PositiveInt
-from typing import ClassVar
+from sabanamusic.typing import PositiveInt
 
-from measure_following_game.environment.context.manager.base import ContextManagerBase
-from measure_following_game.environment.context.renderer import ContextRenderer
+from measure_following_game.environment.context.manager.base import ContextManager
 
 
-__all__ = ["MIDIContextManager"]
-
-
-class MIDIContextManager(ContextManagerBase):
+class MIDIContextManager(ContextManager):
 
     num_features: ClassVar[PositiveInt] = 3
 
     @beartype
     def __init__(
         self,
-        score_root: PathLike,
+        renderer: ContextManager,
         record: MIDIRecord,
-        renderer: ContextRenderer,
-        *,
-        fps: PositiveInt = 20,
-        onset_only: bool = True,
         window_size: PositiveInt = 32,
-        threshold: PositiveFloat = 0.33,
+        memory_size: PositiveInt = 32,
     ):
         super(MIDIContextManager, self).__init__(
-            score_root,
-            record,
-            renderer,
-            fps=fps,
-            onset_only=onset_only,
-            window_size=window_size,
+            renderer, record, window_size, memory_size
         )
-        self.threshold = threshold
 
     def _fill_similarity_matrix(self):
-        similarity_matrix = self.similarity_matrix
-        similarity_matrix.fill(0.0)
+        onset_only = self.renderer.onset_only
 
         record: MIDIRecord = self.record
         record_num_frames = record.num_frames
-        record_repr_sequence = record.get_repr_sequence()
-        threshold = self.threshold
+        record_repr_sequence, record_onset_indices = record.get_repr_sequence()
 
-        for idx, measure in enumerate(self.window):
+        similarity_matrix = self.similarity_matrix
+        similarity_matrix.fill(0.0)
+        for idx, measure in enumerate(self.window_measures):
             timewarping_distance, (head, tail) = dtw_compact(
                 measure.repr_sequence, record_repr_sequence, subsequence=True
             )
 
-            if self.onset_only:
-                alignment = get_alignment_without_padding(alignment)
+            if onset_only:
+                (head, tail) = get_alignment_without_padding((head, tail))
 
-            record_pitch_histogram = record.get_pitch_histogram(alignment)
+            record_pitch_histogram = record.get_pitch_histogram((head, tail))
             euclidean_distance = euclidean(
                 measure.pitch_histogram, record_pitch_histogram
             )
 
             # similarity, offset, size
             similarity_matrix[idx, 0] = calc_algorithmic_similarity(
-                (timewarping_distance, euclidean_distance), threshold
+                distances=[timewarping_distance, euclidean_distance]
             )
             similarity_matrix[idx, 1] = head / (record_num_frames - 1)
             similarity_matrix[idx, 2] = (tail - head) / record_num_frames

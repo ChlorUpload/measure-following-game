@@ -6,13 +6,13 @@ from beartype import beartype
 from gym import Env, spaces
 
 from measure_following_game.types import ActType, ObsType
-from measure_following_game.environment.context import ContextManagerBase
+from measure_following_game.environment.context import ContextManager
 from measure_following_game.environment.rewards import Reward
 
 
 class MeasureFollowingEnv(Env[ObsType, ActType]):
     @beartype
-    def __init__(self, manager: ContextManagerBase, reward: Reward):
+    def __init__(self, manager: ContextManager, reward: Reward):
         self.manager = manager
         self.metadata.update(manager.metadata)
         self.reward = reward

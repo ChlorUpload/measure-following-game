@@ -1,170 +1,166 @@
 # -*- coding: utf-8 -*-
 
+__all__ = ["ContextManager"]
+
 from abc import abstractmethod
+from typing import ClassVar
+
 from beartype import beartype
 import numpy as np
-from pathlib import Path
-from sabanamusic.common import make_score_measures, Measure, RecordBase
-from sabanamusic.typing import Index, PathLike, PositiveInt
-from typing import ClassVar, Literal
+from sabanamusic.common import Measure, RecordBase
+from sabanamusic.typing import Index, PositiveInt
 
 from measure_following_game.environment.context.renderer import ContextRenderer
+from measure_following_game.types import ActType, ObsType
 
 
-__all__ = ["ContextManagerBase"]
+class ContextManager(object):
 
-
-class ContextManagerBase(object):
-
-    metadata: ClassVar[dict] = {"render_modes": ["human", "rgb_array"]}
+    metadata: ClassVar[dict] = {"render_modes": []}
     num_features: ClassVar[PositiveInt] = 1
 
     @beartype
     def __init__(
         self,
-        score_root: PathLike,
-        record: RecordBase,
         renderer: ContextRenderer,
-        *,
-        fps: PositiveInt = 20,
-        onset_only: bool = True,
+        record: RecordBase,
         window_size: PositiveInt = 32,
+        memory_size: PositiveInt = 32,
     ):
-        self.score_root = Path(score_root)
-        self.fps, self.onset_only = fps, onset_only
-        self.score_measures: list[Measure] = make_score_measures(
-            score_root=self.score_root, fps=self.fps, onset_only=self.onset_only
-        )
-        self.num_measures_in_score = len(self.score_measures)
-
         self.record = record
+
         self.renderer = renderer
+        self.score_measures = renderer.score_measures
+        self.num_score_measures = renderer.num_score_measures
+        self.metadata["render_modes"] = renderer.modes
 
-        if window_size > self.num_measures_in_score:
-            raise ValueError("`window_size` cannot exceed number of measures in score")
+        if window_size > self.num_score_measures:
+            raise ValueError(
+                "`window_size` cannot exceed number of measures in the score"
+            )
 
-        self.window_head = 0
         self.window_size = window_size
-        self.num_measures_in_window = self.window_size
+        self.window_shape = (window_size, self.num_features)
 
-        self.similarity_matrix = np.zeros(self.window_shape, dtype=np.float32)
-        self.true_measure = -1
-        self.pred_measure = -1
+        self.num_actions = window_size + 2
+        self.true_action = -1
+        self.pred_policy = None
 
-        self.local_history: list[Index] = []
-        self.global_history: list[Index] = []
+        self.memory_size = memory_size
+        self.memory_shape = (memory_size, self.num_actions)
+
+        self.similarity_matrix = np.zeros(shape=self.window_shape, dtype=np.float32)
+        self.memory_matrix = np.zeros(shape=self.memory_shape, dtype=np.float32)
+
         self.done = False
 
     @property
-    def measure_range(self) -> tuple[Index, Index]:
-        return (self.window_head, self.window_head + self.num_measures_in_window)
+    def window_head(self) -> Index:
+        return self.renderer.window_head
 
     @property
-    def window(self) -> list[Measure]:
-        window_head, window_tail = self.measure_range
-        return self.score_measures[window_head:window_tail]
+    def num_window_measures(self) -> PositiveInt:
+        return self.renderer.num_window_measures
 
     @property
-    def window_shape(self) -> tuple[PositiveInt, PositiveInt]:
-        return (self.window_size, self.num_features)
+    def window_measures(self) -> list[Measure]:
+        head = self.window_head
+        tail = self.window_head + self.num_window_measures
+        return self.score_measures[head:tail]
 
     @property
+    def observation(self) -> ObsType:
+        return (self.similarity_matrix, self.memory_matrix)
+
+    @property
+    @abstractmethod
     def info(self) -> dict:
-        return {
-            "measure_range": self.measure_range,
-            "cursor": {
-                "global": self.get_cursor(mode="global"),
-                "local": self.get_cursor(mode="local"),
-            },
-            "history": {
-                "global": self.get_history(mode="global"),
-                "local": self.get_history(mode="local"),
-            },
-        }
+        return {}
 
-    def get_history(self, mode: Literal["global", "local"] = "global") -> list[Index]:
-        if mode not in ("global", "local"):
-            raise KeyError("Unsupported mode %s" % mode)
-        history = self.global_history if mode == "global" else self.local_history
-        return history[::]
+    def _init_pred_policy(self):
+        self.pred_policy = np.zeros(shape=self.num_actions, dtype=np.float32)
+        self.pred_policy[-1] = 1.0
 
-    def get_cursor(
-        self, mode: Literal["global", "local"] = "global"
-    ) -> Index | Literal[-1]:
-        if mode not in ("global", "local"):
-            raise KeyError("Unsupported mode %s" % mode)
-        history = self.global_history if mode == "global" else self.local_history
-        return history[-1] if history else -1
+    def _init_memory_matrix(self):
+        self.memory_matrix.fill(0.0)
+        self.memory_matrix[:, -1] = 1.0
+
+    def _fill_memory_matrix(self):
+        self.memory_matrix[:-1, :] = self.memory_matrix[1:, :]
+        self.memory_matrix[-1, :] = self.pred_policy
+
+    def _init_similarity_matrix(self):
+        self.similarity_matrix.fill(0.0)
 
     @abstractmethod
     def _fill_similarity_matrix(self):
         raise NotImplementedError()
 
-    # TODO(kaparoo): need implementation
-    def _slide_or_stay(self):
-        self.local_history  # do something when slide
-        self.window_head = 0
-        self.num_measures_in_window = self.window_size
-
     @beartype
-    def step(
-        self, pred_measure: Index
-    ) -> tuple[np.ndarray, Index | Literal[-1], bool, dict]:
-        num_measures_in_window = self.num_measures_in_window
-        self.pred_measure = np.clip(pred_measure, 0, num_measures_in_window - 1)
-        self.local_history.append(self.pred_measure)
-        self.global_history.append(self.pred_measure + self.window_head)
+    def step(self, pred_policy: ActType) -> tuple[ObsType, int, bool, dict]:
+        self.pred_policy = pred_policy
 
         if self.done:
-            self.true_measure = -1
-            self.similarity_matrix.fill(0.0)
+            self.true_action = -1
+            self._init_memory_matrix()
+            self._init_similarity_matrix()
         else:
-            self.true_measure = self.record.true_measure - self.window_head
-            if not (0 <= self.true_measure < num_measures_in_window):
-                self.true_measure = -1
-                self.similarity_matrix.fill(0.0)
-                self.done = True
+            self.true_action = self.record.true_action
+            if self.true_action == -1:
+                self.renderer.stay()
+            elif self.true_action == -2:
+                self.renderer.slide()
             else:
-                self._slide_or_stay()
+                self.true_action -= self.window_head
+                if not (0 <= self.true_action < self.num_window_measures):
+                    self.done = True
+                    self.true_action = -1
+                    self._init_memory_matrix()
+                    self._init_similarity_matrix()
+                else:
+                    self.renderer.step(pred_policy)
+
+            if not self.done:
                 self.record.step()
+                self._fill_memory_matrix()
                 self._fill_similarity_matrix()
                 self.done = self.record.done
 
-        return self.similarity_matrix, self.true_measure, self.done, self.info
+        return self.observation, self.true_action, self.done, self.info
 
-    # TODO(kaparoo): need implementation
-    def _init_window_and_history(self, start_measure: int = 0):
-        self.local_history = []
-        self.global_history = []
-        self.window_head = 0
-        self.num_measures_in_window = self.window_size
-
+    @beartype
     def reset(
         self,
         *,
         seed: int | None = None,
         return_info: bool = False,
         options: dict | None = None,
-    ) -> np.ndarray | tuple[np.ndarray, dict]:
-        start_measure = 0
-        if isinstance(options, dict) and "start_measure" in options:
-            start_measure = int(options["start_measure"])
-        self._init_window_and_history(start_measure)
-        self.record.reset(start_measure, seed=seed)
+    ) -> ObsType | tuple[ObsType, dict]:
+        record_options = {}
+        renderer_options = {}
+        if isinstance(options, dict):
+            if isinstance(options.get("record"), dict):
+                record_options = options["record"]
+            if isinstance(options.get("renderer"), dict):
+                renderer_options = options["renderer"]
+
+        start_measure = self.renderer.reset(seed=seed, options=renderer_options)
+        self.record.reset(start_measure, seed=seed, options=record_options)
+
+        self.true_action = -1
+        self._init_pred_policy()
+        self._init_memory_matrix()
         self._fill_similarity_matrix()
-        self.done = self.record.done
 
         if return_info:
-            return self.similarity_matrix, self.info
+            return self.observation, self.info
         else:
-            return self.similarity_matrix
+            return self.observation
 
-    def render(
-        self, mode: Literal["human", "rgb_array"] = "human"
-    ) -> np.ndarray | None:
-        if mode not in ("human", "rgb_array"):
-            raise KeyError("Unsupported mode: %s" % mode)
-        # TODO(kaparoo): need implementation
+    @beartype
+    def render(self, mode: str = "human"):
+        if mode not in self.metadata["render_modes"]:
+            raise KeyError(f"unsupported mode: {mode}")
         return self.renderer.render(mode=mode)
 
     def close(self):

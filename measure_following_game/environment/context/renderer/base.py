@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import ClassVar
 
 from beartype import beartype
-from sabanamusic.common import make_score_measures, Measure
-from sabanamusic.typing import Index, PathLike, PositiveInt
+from sabanamusic.common.types import Index, PathLike, PositiveInt
+from sabanamusic.models.measure import make_score_measures, Measure
 
 from measure_following_game.types import ActType
 
@@ -34,29 +34,28 @@ class ContextRenderer(object):
         self.window_head: Index = 0
         self.num_window_measures: PositiveInt = 0
 
-    @abstractmethod
     def stay(self):
-        ...
+        pass
 
     @abstractmethod
     def slide(self):
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def step(self, pred_policy: ActType):
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def reset(self, seed: int | None = None, options: dict = {}) -> Index:
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
-    def render(self, mode: str):
-        ...
+    def render(self, mode: str = "human"):
+        raise NotImplementedError()
 
     @abstractmethod
     def close(self):
-        ...
+        raise NotImplementedError()
 
     def __del__(self):
         self.close()

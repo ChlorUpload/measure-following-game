@@ -5,9 +5,9 @@ __all__ = ["MIDIContextManager"]
 from typing import ClassVar
 
 from beartype import beartype
-from sabanamusic.common import MIDIRecord
+from sabanamusic.common.types import PositiveInt
+from sabanamusic.models.records import MIDIRecord
 from sabanamusic.similarity import *
-from sabanamusic.typing import PositiveInt
 
 from measure_following_game.environment.context.manager.base import ContextManager
 
@@ -29,9 +29,8 @@ class MIDIContextManager(ContextManager):
         )
 
     def _fill_similarity_matrix(self):
-        onset_only = self.renderer.onset_only
-
         record: MIDIRecord = self.record
+        onset_only = record.onset_only
         record_num_frames = record.num_frames
         record_repr_sequence, record_onset_indices = record.get_repr_sequence()
 
@@ -43,7 +42,7 @@ class MIDIContextManager(ContextManager):
             )
 
             if onset_only:
-                (head, tail) = get_alignment_without_padding((head, tail))
+                (head, tail) = get_actual_alignment((head, tail), record_onset_indices)
 
             record_pitch_histogram = record.get_pitch_histogram((head, tail))
             euclidean_distance = euclidean(

@@ -6,9 +6,8 @@ from abc import abstractmethod
 from typing import ClassVar
 
 from beartype import beartype
-import numpy as np
-import numpy.typing as npt
-from sabanamusic.typing import PositiveInt
+from numpy import clip
+from sabanamusic.common.types import PositiveInt
 
 from measure_following_game.types import ActType
 
@@ -50,6 +49,6 @@ class TriangleReward(Reward):
     def _calc_reward(self, true_action: int, pred_action: int) -> float:
         if self._is_measure(true_action) and self._is_measure(pred_action):
             abs_error = abs(true_action - pred_action)
-            abs_error = np.clip(abs_error, 0.0, self.threshold)
+            abs_error = clip(abs_error, 0.0, self.threshold)
             return (self.threshold - abs_error) / self.threshold
         return 0.0

@@ -7,8 +7,8 @@ from typing import ClassVar
 
 from beartype import beartype
 import numpy as np
-from sabanamusic.common import Measure, RecordBase
-from sabanamusic.typing import Index, PositiveInt
+from sabanamusic.models import Measure, Record
+from sabanamusic.common.types import Index, PositiveInt
 
 from measure_following_game.environment.context.renderer import ContextRenderer
 from measure_following_game.types import ActType, ObsType
@@ -23,7 +23,7 @@ class ContextManager(object):
     def __init__(
         self,
         renderer: ContextRenderer,
-        record: RecordBase,
+        record: Record,
         window_size: PositiveInt = 32,
         memory_size: PositiveInt = 32,
     ):

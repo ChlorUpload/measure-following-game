@@ -41,8 +41,13 @@ class ContextManager(object):
 
         self.window_size = window_size
         self.window_shape = (window_size, self.num_features)
+        self.num_actions = window_size + 2  # +2 for `slide`` and `stay`
 
-        self.num_actions = window_size + 2
+        # action:
+        # 0 ~ window_size-1: move cursor to i-th measure
+        # -1, num_actions-1: stay and do nothing
+        # -2, num_actions-2: slide the window
+
         self.true_action = -1
         self.pred_policy = None
 
@@ -105,24 +110,22 @@ class ContextManager(object):
             self._init_memory_matrix()
             self._init_similarity_matrix()
         else:
-            self.true_action = self.record.true_action
-            if self.true_action == -1:
-                self.renderer.stay()
-            elif self.true_action == -2:
-                self.renderer.slide()
+            self.true_action = self.record.true_action - self.window_head
+            if not (0 <= self.true_action < self.num_window_measures):
+                self.done = True
+                self.true_action = -1
             else:
-                self.true_action -= self.window_head
-                if not (0 <= self.true_action < self.num_window_measures):
-                    self.done = True
-                    self.true_action = -1
-                    self._init_memory_matrix()
-                    self._init_similarity_matrix()
-                else:
-                    self.renderer.step(pred_policy)
-
-            if not self.done:
-                self.record.step()
                 self._fill_memory_matrix()
+
+                pred_action = np.argmax(self.pred_policy)
+                if pred_action == self.num_actions - 1:
+                    self.renderer.stay()
+                elif pred_action == self.num_actions - 2:
+                    self.renderer.slide()
+                else:
+                    self.renderer.step(self.pred_policy)
+
+                self.record.step()
                 self._fill_similarity_matrix()
                 self.done = self.record.done
 

@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from beartype import beartype
 from sabanamusic.common.types import PositiveInt
-from sabanamusic.models.records import MIDIRecord
+from sabanamusic.models.musical import MIDIRecord
 from sabanamusic.similarity import *
 
 from measure_following_game.environment.context.manager.base import ContextManager

@@ -7,7 +7,7 @@ from typing import ClassVar
 
 from beartype import beartype
 import numpy as np
-from sabanamusic.models import Measure, Record
+from sabanamusic.models.musical import Measure, Record
 from sabanamusic.common.types import Index, PositiveInt
 
 from measure_following_game.environment.context.renderer import ContextRenderer

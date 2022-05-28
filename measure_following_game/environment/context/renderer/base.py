@@ -8,14 +8,14 @@ from typing import ClassVar
 
 from beartype import beartype
 from sabanamusic.common.types import Index, PathLike, PositiveInt
-from sabanamusic.models.measure import make_score_measures, Measure
+from sabanamusic.models.musical import make_score_measures, Measure
 
 from measure_following_game.types import ActType
 
 
 class ContextRenderer(object):
 
-    modes: ClassVar[list[str]] = ["human", "rgb_array"]
+    modes: ClassVar[list[str]] = ["human", "rgb_array", "ansi"]
 
     @beartype
     def __init__(

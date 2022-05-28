@@ -3,7 +3,6 @@
 __all__ = ["make_env_base_param", "make_env_component_param"]
 
 from pathlib import Path
-import random
 
 from beartype import beartype
 from sabanamusic.common.types import PathLike, PositiveInt
@@ -63,7 +62,8 @@ def make_reward(reward_id: str, window_size: int):
 @beartype
 def make_record(
     record_id: str,
-    record_root: PathLike,
+    score_root: PathLike,
+    record_name: str | None = None,
     fps: PositiveInt = 20,
     duration: PositiveInt = 3,
     step_freq: PositiveInt = 10,
@@ -71,6 +71,7 @@ def make_record(
 ):
     match record_id.lower():
         case "midi":
+            record_root, _ = MIDIRecord.get_valid_record_root(score_root, record_name)
             return MIDIRecord(record_root, fps, duration, step_freq, onset_only)
         case _:
             raise KeyError(f"Unknown id: {record_id}")
@@ -106,37 +107,6 @@ def make_manager(
 
 
 @beartype
-def get_valid_midi_record_root(
-    score_root: PathLike, record_name: str | None = None
-) -> Path:
-    score_root = Path(score_root)
-
-    if record_name is None:
-        record_name = ""
-
-    record_root = score_root / record_name
-
-    def is_valid_record(record_root: Path) -> bool:
-        record_midi_path = record_root.with_suffix(".midi")
-        record_annotation_path = record_root.with_suffix(".csv")
-        return record_midi_path.exists() and record_annotation_path.exists()
-
-    if not is_valid_record(record_root):
-        valid_record_roots = [
-            record.with_suffix("")
-            for record in score_root.rglob("**/*.midi")
-            if "score" not in record and is_valid_record(record.with_suffix(""))
-        ]
-        if not valid_record_roots:
-            raise FileNotFoundError(f"cannot find any MIDI record in {str(score_root)}")
-        record_root = random.choice(valid_record_roots)
-
-    record_name = str(record_root.resolve()).replace(str(score_root.resolve()))
-
-    return record_root
-
-
-@beartype
 def make_env(
     base_param: EnvBaseParam,
     component_param: EnvComponentParam,
@@ -152,14 +122,10 @@ def make_env(
         base_param.onset_only,
     )
 
-    record_root, record_name = get_valid_midi_record_root(
-        base_param.score_root, base_param.record_name
-    )
-    base_param.record_name = record_name
-
     record = make_record(
         component_param.record_id,
-        record_root,
+        base_param.score_root,
+        base_param.record_name,
         base_param.fps,
         duration,
         step_freq,

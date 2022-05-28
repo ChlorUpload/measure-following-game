@@ -7,9 +7,11 @@ from typing import ClassVar
 from beartype import beartype
 from sabanamusic.common.types import PositiveInt
 from sabanamusic.models.musical import MIDIRecord
-from sabanamusic.similarity import *
+from sabanamusic.similarity.algorithms import *
+from sabanamusic.similarity.utils import get_actual_alignment
 
 from measure_following_game.environment.context.manager.base import ContextManager
+from measure_following_game.environment.context.renderer import ContextRenderer
 
 
 class MIDIContextManager(ContextManager):
@@ -19,7 +21,7 @@ class MIDIContextManager(ContextManager):
     @beartype
     def __init__(
         self,
-        renderer: ContextManager,
+        renderer: ContextRenderer,
         record: MIDIRecord,
         window_size: PositiveInt = 32,
         memory_size: PositiveInt = 32,
@@ -49,7 +51,7 @@ class MIDIContextManager(ContextManager):
                 measure.pitch_histogram, record_pitch_histogram
             )
 
-            # similarity, offset, size
+            # similarity, subsequence offset, sebsequence size
             similarity_matrix[idx, 0] = calc_algorithmic_similarity(
                 distances=[timewarping_distance, euclidean_distance]
             )

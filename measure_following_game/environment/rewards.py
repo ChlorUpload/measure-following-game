@@ -19,7 +19,7 @@ class Reward(object):
     @beartype
     def __init__(self, window_size: PositiveInt = 32):
         self.window_size = window_size
-        self.num_actions = window_size + 2  # +2 for `slide` and `noop`
+        self.num_actions = window_size + 2  # +2 for `slide` and `stay`
 
     @beartype
     def __call__(self, true_action: int, pred_policy: ActType) -> float:
@@ -30,7 +30,11 @@ class Reward(object):
         return expected_reward
 
     def _is_measure(self, action: int) -> bool:
-        return 0 <= action < self.num_actions
+        # action:
+        # 0 ~ window_size-1: move cursor to i-th measure
+        # -1, num_actions-1: stay and do nothing
+        # -2, num_actions-2: slide the window
+        return 0 <= action < self.window_size
 
     @abstractmethod
     def _calc_reward(self, true_action: int, pred_action: int) -> float:

@@ -21,6 +21,7 @@ class GridContextRenderer(ContextRenderer):
         score_root: PathLike,
         fps: PositiveInt = 20,
         onset_only: bool = True,
+        **kwargs,
     ):
         super().__init__(score_root, fps, onset_only)
 

@@ -17,7 +17,7 @@ class Reward(object):
     range: ClassVar[tuple[float, float]] = (float("-inf"), float("+inf"))
 
     @beartype
-    def __init__(self, window_size: PositiveInt = 32):
+    def __init__(self, window_size: PositiveInt = 32, **kwargs):
         self.window_size = window_size
         self.num_actions = window_size + 2  # +2 for `slide` and `stay`
 
@@ -46,7 +46,7 @@ class TriangleReward(Reward):
     range: ClassVar[tuple[float, float]] = (0.0, float("+inf"))
 
     @beartype
-    def __init__(self, window_size: PositiveInt = 32):
+    def __init__(self, window_size: PositiveInt = 32, **kwargs):
         super().__init__(window_size)
         self.threshold = window_size // 2
 

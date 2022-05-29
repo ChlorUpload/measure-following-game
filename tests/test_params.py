@@ -17,16 +17,10 @@ class ParamsTest(unittest.TestCase):
     def tearDownClass(cls) -> None:
         os.remove(cls.file_path)
 
-    def test_env_base_param(self):
-        param1 = make_env_base_param(score_root="somewhere", record_name="unknown")
+    def test_env_param(self):
+        param1 = make_env_param(score_root="somewhere", record_name="unknown")
         param1.save_json(self.file_path)
-        param2 = EnvBaseParam.load_json(self.file_path)
-        self.assertEqual(param1.config, param2.config)
-
-    def test_env_component_param(self):
-        param1 = make_env_component_param()
-        param1.save_json(self.file_path)
-        param2 = EnvComponentParam.load_json(self.file_path)
+        param2 = EnvParam.load_json(self.file_path)
         self.assertEqual(param1.config, param2.config)
 
 

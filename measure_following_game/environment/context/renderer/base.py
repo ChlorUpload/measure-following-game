@@ -23,6 +23,7 @@ class ContextRenderer(object):
         score_root: PathLike,
         fps: PositiveInt = 20,
         onset_only: bool = True,
+        **kwargs,
     ):
         self.score_root = Path(score_root)
         self.fps, self.onset_only = fps, onset_only

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ["make_env_base_param", "make_env_component_param"]
+__all__ = ["make_env_param"]
 
-from pathlib import Path
+from typing import Any
 
 from beartype import beartype
 from sabanamusic.common.types import PathLike, PositiveInt
@@ -13,48 +13,54 @@ from measure_following_game.environment import *
 
 
 @beartype
-def make_env_base_param(
+def make_env_param(
+    # commons
     score_root: PathLike,
     record_name: str | None = None,
     window_size: PositiveInt = 32,
     memory_size: PositiveInt = 32,
     fps: PositiveInt = 20,
     onset_only: bool = True,
-) -> EnvBaseParam:
-    score_root = str(Path(score_root).resolve())
-    return EnvBaseParam(
-        score_root=score_root,
-        record_name=record_name,
-        window_size=window_size,
-        memory_size=memory_size,
-        fps=fps,
-        onset_only=onset_only,
+    buffer_duration: PositiveInt = 3,
+    buffer_step_size: PositiveInt = 10,
+    # component sepecifics
+    reward_id: str = "triangle",
+    manager_id: str = "midi",
+    renderer_id: str = "grid",
+    record_id: str = "midi",
+    reward_options: dict[str, Any] = {},
+    record_options: dict[str, Any] = {},
+    renderer_options: dict[str, Any] = {},
+    manager_options: dict[str, Any] = {},
+) -> EnvParam:
+    return EnvParam(
+        score_root,
+        record_name,
+        window_size,
+        memory_size,
+        fps,
+        onset_only,
+        buffer_duration,
+        buffer_step_size,
+        reward_id,
+        manager_id,
+        renderer_id,
+        record_id,
+        reward_options,
+        record_options,
+        renderer_options,
+        manager_options,
     )
 
 
-@beartype
-def make_env_component_param(
-    reward_id: str = "Triangle",
-    manager_id: str = "MIDI",
-    renderer_id: str = "Grid",
-    record_id: str = "MIDI",
-) -> EnvComponentParam:
-    return EnvComponentParam(
-        reward_id=reward_id,
-        manager_id=manager_id,
-        record_id=record_id,
-        renderer_id=renderer_id,
-    )
-
-
-# TODO(kaparoo): need factory class method for Reward, ContextManager, Record, and Renderer?
+# TODO(kaparoo): need factory class method for Reward, Record, Renderer, and Manager?
 
 
 @beartype
-def make_reward(reward_id: str, window_size: int):
+def make_reward(reward_id: str, window_size: int, reward_options: dict = {}):
     match reward_id.lower():
         case "triangle":
-            return TriangleReward(window_size)
+            return TriangleReward(window_size, **reward_options)
         case _:
             raise KeyError(f"Unknown id: {reward_id}")
 
@@ -68,11 +74,14 @@ def make_record(
     duration: PositiveInt = 3,
     step_freq: PositiveInt = 10,
     onset_only: bool = True,
+    record_options: dict = {},
 ):
     match record_id.lower():
         case "midi":
             record_root, _ = MIDIRecord.get_valid_record_root(score_root, record_name)
-            return MIDIRecord(record_root, fps, duration, step_freq, onset_only)
+            return MIDIRecord(
+                record_root, fps, duration, step_freq, onset_only, **record_options
+            )
         case _:
             raise KeyError(f"Unknown id: {record_id}")
 
@@ -83,10 +92,11 @@ def make_renderer(
     score_root: PathLike,
     fps: PositiveInt = 20,
     onset_only: bool = True,
+    renderer_options: dict = {},
 ):
     match renderer_id.lower():
         case "grid":
-            return GridContextRenderer(score_root, fps, onset_only)
+            return GridContextRenderer(score_root, fps, onset_only, **renderer_options)
         case _:
             raise KeyError(f"Unknown id: {renderer_id}")
 
@@ -98,46 +108,41 @@ def make_manager(
     record: Record,
     window_size: PositiveInt = 32,
     memory_size: PositiveInt = 32,
+    manager_options: dict = {},
 ):
     match manager_id.lower():
         case "midi":
-            return MIDIContextManager(renderer, record, window_size, memory_size)
+            return MIDIContextManager(
+                renderer, record, window_size, memory_size, **manager_options
+            )
         case _:
             raise KeyError(f"Unknown id: {manager_id}")
 
 
 @beartype
-def make_env(
-    base_param: EnvBaseParam,
-    component_param: EnvComponentParam,
-    duration: PositiveInt = 3,
-    step_freq: PositiveInt = 10,
-) -> MeasureFollowingEnv:
-    reward = make_reward(component_param.reward_id, base_param.window_size)
+def make_env(param: EnvParam) -> MeasureFollowingEnv:
+    reward = make_reward(param.reward_id, param.window_size)
 
     renderer = make_renderer(
-        component_param.renderer_id,
-        base_param.score_root,
-        base_param.fps,
-        base_param.onset_only,
+        param.renderer_id, param.score_root, param.fps, param.onset_only
     )
 
     record = make_record(
-        component_param.record_id,
-        base_param.score_root,
-        base_param.record_name,
-        base_param.fps,
-        duration,
-        step_freq,
-        base_param.onset_only,
+        param.record_id,
+        param.score_root,
+        param.record_name,
+        param.fps,
+        param.buffer_duration,
+        param.buffer_step_size,
+        param.onset_only,
     )
 
     manager = make_manager(
-        component_param.manager_id,
+        param.manager_id,
         renderer,
         record,
-        base_param.window_size,
-        base_param.memory_size,
+        param.window_size,
+        param.memory_size,
     )
 
     return MeasureFollowingEnv(manager, reward)

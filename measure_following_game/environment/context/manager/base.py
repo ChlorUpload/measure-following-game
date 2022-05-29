@@ -26,6 +26,7 @@ class ContextManager(object):
         record: Record,
         window_size: PositiveInt = 32,
         memory_size: PositiveInt = 32,
+        **kwargs,
     ):
         self.record = record
 

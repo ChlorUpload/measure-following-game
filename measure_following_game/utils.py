@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ["make_env_param"]
+__all__ = [
+    "make_env_param",
+    "make_env",
+    "make_manager",
+    "make_record",
+    "make_renderer",
+    "make_reward",
+]
 
 from typing import Any
 
@@ -71,8 +78,8 @@ def make_record(
     score_root: PathLike,
     record_name: str | None = None,
     fps: PositiveInt = 20,
-    duration: PositiveInt = 3,
-    step_freq: PositiveInt = 10,
+    buffer_duration: PositiveInt = 3,
+    buffer_step_size: PositiveInt = 10,
     onset_only: bool = True,
     record_options: dict = {},
 ):
@@ -80,7 +87,12 @@ def make_record(
         case "midi":
             record_root, _ = MIDIRecord.get_valid_record_root(score_root, record_name)
             return MIDIRecord(
-                record_root, fps, duration, step_freq, onset_only, **record_options
+                record_root,
+                fps=fps,
+                buffer_duration=buffer_duration,
+                buffer_step_size=buffer_step_size,
+                onset_only=onset_only,
+                **record_options,
             )
         case _:
             raise KeyError(f"Unknown id: {record_id}")
@@ -106,8 +118,8 @@ def make_manager(
     manager_id: str,
     renderer: ContextRenderer,
     record: Record,
-    window_size: PositiveInt = 32,
-    memory_size: PositiveInt = 32,
+    window_size: PositiveInt = 16,
+    memory_size: PositiveInt = 16,
     manager_options: dict = {},
 ):
     match manager_id.lower():

@@ -23,8 +23,8 @@ class MIDIContextManager(ContextManager):
         self,
         renderer: ContextRenderer,
         record: MIDIRecord,
-        window_size: PositiveInt = 32,
-        memory_size: PositiveInt = 32,
+        window_size: PositiveInt = 16,
+        memory_size: PositiveInt = 16,
         **kwargs,
     ):
         super(MIDIContextManager, self).__init__(

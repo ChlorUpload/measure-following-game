@@ -14,8 +14,8 @@ class EnvParam:
     # common
     score_root: str
     record_name: str | None = None
-    window_size: int = 32
-    memory_size: int = 32
+    window_size: int = 16
+    memory_size: int = 16
     fps: int = 20
     onset_only: bool = True
     buffer_duration: int = 3

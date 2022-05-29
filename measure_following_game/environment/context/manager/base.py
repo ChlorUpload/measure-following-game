@@ -24,8 +24,8 @@ class ContextManager(object):
         self,
         renderer: ContextRenderer,
         record: Record,
-        window_size: PositiveInt = 32,
-        memory_size: PositiveInt = 32,
+        window_size: PositiveInt = 16,
+        memory_size: PositiveInt = 16,
         **kwargs,
     ):
         self.record = record

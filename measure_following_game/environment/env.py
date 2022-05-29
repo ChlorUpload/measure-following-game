@@ -19,8 +19,10 @@ class MeasureFollowingEnv(Env[ObsType, ActType]):
         self.reward_range = reward.range
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(manager.window_size,))
         self.observation_space = spaces.Tuple(
-            spaces.Box(low=0.0, high=1.0, shape=manager.window_shape),
-            spaces.Box(low=0.0, high=1.0, shape=manager.memory_shape),
+            (
+                spaces.Box(low=0.0, high=1.0, shape=manager.window_shape),
+                spaces.Box(low=0.0, high=1.0, shape=manager.memory_shape),
+            )
         )
 
     @beartype

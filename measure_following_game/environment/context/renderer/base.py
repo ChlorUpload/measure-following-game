@@ -15,7 +15,7 @@ from measure_following_game.types import ActType
 
 class ContextRenderer(object):
 
-    modes: ClassVar[list[str]] = ["human", "rgb_array", "ansi"]
+    render_modes: ClassVar[list[str]] = ["human", "rgb_array"]
 
     @beartype
     def __init__(
@@ -32,8 +32,13 @@ class ContextRenderer(object):
         )
         self.num_score_measures = len(self.score_measures)
 
-        self.window_head: Index = 0
-        self.num_window_measures: PositiveInt = 0
+    @property
+    def window_head(self) -> Index:
+        raise NotImplementedError()
+
+    @property
+    def num_window_measures(self) -> PositiveInt:
+        raise NotImplementedError()
 
     def stay(self):
         pass

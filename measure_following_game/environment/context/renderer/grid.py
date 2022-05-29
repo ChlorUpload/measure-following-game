@@ -2,18 +2,28 @@
 
 __all__ = ["GridContextRenderer"]
 
+from argparse import ArgumentError
 from typing import ClassVar, Literal
 
 from beartype import beartype
+import numpy as np
+import pygame
 from sabanamusic.common.types import Index, PathLike, PositiveInt
+from sabanamusic.models.graphical import Measure, Sheet, SheetView, JsonIO
 
 from measure_following_game.environment.context.renderer.base import ContextRenderer
 from measure_following_game.types import ActType
 
 
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+PLAIN = (234, 247, 241)
+ACTIVATE = (204, 227, 201)
+
+
 class GridContextRenderer(ContextRenderer):
 
-    modes: ClassVar[list[str]] = ["human", "rgb_array"]
+    render_modes: ClassVar[list[str]] = ["human", "rgb_array"]
 
     @beartype
     def __init__(
@@ -25,25 +35,151 @@ class GridContextRenderer(ContextRenderer):
     ):
         super().__init__(score_root, fps, onset_only)
 
+        self.json_io = JsonIO()
+        self._init_sheet_view(kwargs.get("layout_name"))
+
+        self.sheet_height = 0
+        for staff in self.sheet_view.sheet.staves:
+            self.sheet_height += staff.height
+
+        self.screen_width = self.sheet_view.sheet.layout_width
+        self.screen_height = self.sheet_view.display_height
+
+        self.measure_rects: list = []
+
+        self.cursor = 0
+        self.scroll_top = 0
+
+        self.channel_last = kwargs.get("channel_last") is True
+
+        pygame.init()
+        pygame.display.init()
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        self.surf = pygame.Surface((self.screen_width, self.screen_height))
+
+        self.surf.fill(WHITE)
+        self._calc_resized_measure_rects()
+        self._render_layout_initial_measures()
+
+    @property
+    def visible_measures(self) -> list[Measure]:
+        return self.sheet_view.get_visible_measures()
+
+    @property
+    def visible_indices(self) -> list[Index]:
+        return [m.index for m in self.visible_measures]
+
+    @property
+    def window_head(self) -> Index:
+        return self.visible_measures[0].index
+
+    @property
+    def num_window_measures(self) -> PositiveInt:
+        return len(self.visible_measures)
+
     def slide(self):
-        raise NotImplementedError()
+        self.sheet_view.slide()
+        scroll_dest = self.measure_rects[self.window_head][1]
+        # TODO(kaparoo): need smooth scroll
+        self.scroll_top = scroll_dest
 
     @beartype
     def step(self, pred_policy: ActType):
-        raise NotImplementedError()
+        index = np.argmax(pred_policy)
+        if index in self.visible_indices:
+            self.cursor = index
 
     @beartype
     def reset(self, seed: int | None = None, options: dict = {}) -> Index:
-        raise NotImplementedError()
+        self._init_sheet_view(options.get("layout_name"))
+        self.scroll_top = 0
+        self.cursor = 0
+        if isinstance(start_staff_idx := options.get("start_staff_idx"), int):
+            sheet_view = self.sheet_view
+            for _ in range(len(sheet_view.sheet.staves)):
+                if start_staff_idx == sheet_view.get_visible_staves()[0].index:
+                    break
+                else:
+                    sheet_view.slide()
+            else:
+                raise ArgumentError()
+        np.random.seed(seed)
+        start_measure: Measure = np.random.choice(self.visible_measures)
+        return start_measure.index
 
     @beartype
     def render(self, mode: Literal["human", "rgb_array"] = "human"):
+        self._render_layout_visible_measures()
+        self.screen.fill(WHITE)
+        self.screen.blit(
+            self.surf,
+            (0, 0),
+            area=[0, self.scroll_top, self.screen_width, self.screen_height],
+        )
+
         if mode == "human":
-            ...
+            pygame.display.flip()
         elif mode == "rgb_array":
-            ...
+            rgb_array = pygame.surfarray.pixels3d(self.screen)  # W X H X C
+            channel_order = (1, 0, 2) if self.channel_last else (2, 1, 0)
+            return np.transpose(rgb_array, channel_order)
         else:
             raise KeyError(f"Unsupported mode: {mode}")
 
+    def _calc_resized_measure_rects(self):
+        self.measure_rects = []
+        cur_x = 0
+        cur_y = 0
+        for staff in self.sheet_view.sheet.staves:
+            total_measure_width = 0
+            for measure in staff.measures:
+                total_measure_width += measure.width
+
+            weight = self.screen_width / total_measure_width
+            for measure in staff.measures:
+                resized_width = measure.width * weight
+                measure_rect = (cur_x, cur_y, resized_width, staff.height)
+                self.measure_rects.append(measure_rect)
+                cur_x += resized_width
+
+            cur_x = 0
+            cur_y += staff.height
+
+    def _render_layout_initial_measures(self):
+        self.surf.fill(WHITE)
+        self._render_measures(lambda _: PLAIN)
+
+    def _render_layout_visible_measures(self):
+        def callback(index):
+            if index in self.visible_indices:
+                return ACTIVATE if self.cursor == index else PLAIN
+            else:
+                return None
+
+        self._render_measures(callback)
+
+    def _render_measures(self, get_color_by_index):
+        for index, rect in enumerate(self.measure_rects):
+            color = get_color_by_index(index)
+            if color:
+                pygame.draw.rect(self.surf, color, rect)
+                pygame.draw.rect(self.surf, BLACK, rect, 1)
+                # TODO(kaparoo): need musicxml handle
+
+    def _init_sheet_view(self, layout_name: str | None = None):
+        if layout_name is None:
+            sheet = Sheet.create_random_sheet(
+                self.num_score_measures,
+                measure_width_prob_distribution=[0.3, 0.6, 0.1],
+                staff_wide_prob=0.25,
+                layout_width=np.random.choice(list(range(800, 1600))),
+            )
+        else:
+            json_path = (self.score_root / layout_name).with_suffix(".json")
+            sheet = self.json_io.parse(json_path)
+        self.sheet_view = SheetView(sheet)
+
     def close(self):
-        pass
+        if self.screen is not None:
+            pygame.display.quit()
+            pygame.quit()

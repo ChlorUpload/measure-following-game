@@ -4,6 +4,7 @@ black
 dataclasses-io
 git+https://github.com/sabana-music-lab/sabana-lib
 gym
+pygame
 
 # Optional
 ipykernel

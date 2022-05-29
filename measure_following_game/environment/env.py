@@ -17,7 +17,7 @@ class MeasureFollowingEnv(Env[ObsType, ActType]):
         self.metadata.update(manager.metadata)
         self.reward = reward
         self.reward_range = reward.range
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(manager.window_size,))
+        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(manager.num_actions,))
         self.observation_space = spaces.Tuple(
             (
                 spaces.Box(low=0.0, high=1.0, shape=manager.window_shape),

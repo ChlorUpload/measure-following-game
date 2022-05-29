@@ -24,8 +24,8 @@ def make_env_param(
     # commons
     score_root: PathLike,
     record_name: str | None = None,
-    window_size: PositiveInt = 32,
-    memory_size: PositiveInt = 32,
+    window_size: PositiveInt = 16,
+    memory_size: PositiveInt = 16,
     fps: PositiveInt = 20,
     onset_only: bool = True,
     buffer_duration: PositiveInt = 3,

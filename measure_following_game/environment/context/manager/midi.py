@@ -35,7 +35,8 @@ class MIDIContextManager(ContextManager):
         record: MIDIRecord = self.record
         onset_only = record.onset_only
         record_num_frames = record.num_frames
-        record_repr_sequence, record_onset_indices = record.get_repr_sequence()
+        record_repr_sequence = record.get_repr_sequence()
+        record_onset_indices = record.onset_indices
 
         similarity_matrix = self.similarity_matrix
         similarity_matrix.fill(0.0)
@@ -54,7 +55,7 @@ class MIDIContextManager(ContextManager):
 
             # similarity, subsequence offset, sebsequence size
             similarity_matrix[idx, 0] = calc_algorithmic_similarity(
-                distances=[timewarping_distance, euclidean_distance]
+                distances=[timewarping_distance, euclidean_distance], scales=[1.0, 1.0]
             )
             similarity_matrix[idx, 1] = head / (record_num_frames - 1)
             similarity_matrix[idx, 2] = (tail - head) / record_num_frames

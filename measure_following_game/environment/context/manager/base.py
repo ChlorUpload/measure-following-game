@@ -33,7 +33,7 @@ class ContextManager(object):
         self.renderer = renderer
         self.score_measures = renderer.score_measures
         self.num_score_measures = renderer.num_score_measures
-        self.metadata["render_modes"] = renderer.modes
+        self.metadata["render_modes"] = renderer.render_modes
 
         if window_size > self.num_score_measures:
             raise ValueError(

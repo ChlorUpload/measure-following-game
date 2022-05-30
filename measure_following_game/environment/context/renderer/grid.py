@@ -3,6 +3,8 @@
 __all__ = ["GridContextRenderer"]
 
 from argparse import ArgumentError
+import os
+import re
 from typing import ClassVar, Literal
 
 from beartype import beartype
@@ -19,6 +21,8 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 PLAIN = (234, 247, 241)
 ACTIVATE = (204, 227, 201)
+
+image_regex = r"score_img_([0-9]+)\.png"
 
 
 class GridContextRenderer(ContextRenderer):
@@ -49,6 +53,8 @@ class GridContextRenderer(ContextRenderer):
 
         self.channel_last = kwargs.get("channel_last") is True
 
+        self.measure_images = {}
+
         pygame.init()
         pygame.display.init()
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
@@ -56,6 +62,7 @@ class GridContextRenderer(ContextRenderer):
 
         self.surf.fill(WHITE)
         self._calc_resized_measure_rects()
+        self._load_measure_images()
         self._render_layout_initial_measures()
 
     @property
@@ -142,6 +149,30 @@ class GridContextRenderer(ContextRenderer):
             cur_x = 0
             cur_y += staff.height
 
+    def _load_measure_images(self):
+        image_dir = self.score_root / "score_images"
+        if not os.path.exists(image_dir):
+            return
+
+        for image_path in image_dir.glob("score_img_*.png"):
+            image_path = str(image_path)
+            res = re.findall(image_regex, image_path)
+            if not res or len(res) != 1:
+                break
+            index = int(res[0])
+
+            image = pygame.image.load(image_path)
+            _, _, rw, rh = self.measure_rects[index]
+            iw = image.get_width()
+            ih = image.get_height()
+
+            ratio_w = rw / iw
+            ratio_h = rh / ih
+            ratio = min(ratio_w, ratio_h)
+
+            image = pygame.transform.smoothscale(image, (iw * ratio, ih * ratio))
+            self.measure_images[index] = image
+
     def _render_layout_initial_measures(self):
         self.surf.fill(WHITE)
         self._render_measures(lambda _: PLAIN)
@@ -161,7 +192,12 @@ class GridContextRenderer(ContextRenderer):
             if color:
                 pygame.draw.rect(self.surf, color, rect)
                 pygame.draw.rect(self.surf, BLACK, rect, 1)
-                # TODO(kaparoo): need musicxml handle
+                if index in self.measure_images:
+                    image = self.measure_images.get(index)
+                    iw = image.get_width()
+                    ih = image.get_height()
+                    x, y, w, h = rect
+                    self.surf.blit(image, (x + w / 2 - iw / 2, y + h / 2 - ih / 2))
 
     def close(self):
         if self.screen is not None:

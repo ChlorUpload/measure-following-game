@@ -33,10 +33,7 @@ class GridContextRenderer(ContextRenderer):
         onset_only: bool = True,
         **kwargs,
     ):
-        super().__init__(score_root, fps, onset_only)
-
-        self.json_io = JsonIO()
-        self._init_sheet_view(kwargs.get("layout_name"))
+        super().__init__(score_root, fps, onset_only, **kwargs)
 
         self.sheet_height = 0
         for staff in self.sheet_view.sheet.staves:
@@ -165,19 +162,6 @@ class GridContextRenderer(ContextRenderer):
                 pygame.draw.rect(self.surf, color, rect)
                 pygame.draw.rect(self.surf, BLACK, rect, 1)
                 # TODO(kaparoo): need musicxml handle
-
-    def _init_sheet_view(self, layout_name: str | None = None):
-        if layout_name is None:
-            sheet = Sheet.create_random_sheet(
-                self.num_score_measures,
-                measure_width_prob_distribution=[0.3, 0.6, 0.1],
-                staff_wide_prob=0.25,
-                layout_width=np.random.choice(list(range(800, 1600))),
-            )
-        else:
-            json_path = (self.score_root / layout_name).with_suffix(".json")
-            sheet = self.json_io.parse(json_path)
-        self.sheet_view = SheetView(sheet)
 
     def close(self):
         if self.screen is not None:

@@ -4,8 +4,8 @@ import os
 import pathlib
 import unittest
 
-from measure_following_game.params import *
-from measure_following_game.utils import *
+from measure_following_game.environment.param import EnvParam
+from measure_following_game.environment.utils import make_env_param
 
 
 class ParamsTest(unittest.TestCase):

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 __all__ = [
-    "make_env_param",
     "make_env",
+    "make_env_param",
     "make_manager",
     "make_record",
     "make_renderer",
@@ -15,7 +15,6 @@ from beartype import beartype
 from sabanamusic.common.types import PathLike, PositiveInt
 from sabanamusic.models.musical import Record, MIDIRecord
 
-from measure_following_game.params import *
 from measure_following_game.environment import *
 
 

@@ -7,8 +7,6 @@ from gym import spaces
 import numpy as np
 
 from measure_following_game.environment import *
-from measure_following_game.params import *
-from measure_following_game.utils import *
 
 
 class EnvTest(unittest.TestCase):
@@ -26,7 +24,7 @@ class EnvTest(unittest.TestCase):
 
         action_space = env.action_space
         self.assertIsInstance(action_space, spaces.Box)
-        self.assertEqual(action_space.shape, (self.env_param.window_size,))
+        self.assertEqual(action_space.shape, (env.manager.num_actions,))
         self.assertEqual(action_space.dtype, np.float32)
 
         observation_space = env.observation_space

@@ -56,7 +56,7 @@ class ContextManager(object):
         self.memory_shape = (memory_size, self.num_actions)
 
         self.similarity_matrix = np.zeros(shape=self.window_shape, dtype=np.float32)
-        self.memory_matrix = np.zeros(shape=self.memory_shape, dtype=np.float32)
+        self.policy_memory = np.zeros(shape=self.memory_shape, dtype=np.float32)
 
         self.done = False
 
@@ -76,7 +76,7 @@ class ContextManager(object):
 
     @property
     def observation(self) -> ObsType:
-        return (self.similarity_matrix, self.memory_matrix)
+        return (self.similarity_matrix, self.policy_memory)
 
     @property
     @abstractmethod
@@ -87,13 +87,13 @@ class ContextManager(object):
         self.pred_policy = np.zeros(shape=self.num_actions, dtype=np.float32)
         self.pred_policy[-1] = 1.0
 
-    def _init_memory_matrix(self):
-        self.memory_matrix.fill(0.0)
-        self.memory_matrix[:, -1] = 1.0
+    def _init_policy_memory(self):
+        self.policy_memory.fill(0.0)
+        self.policy_memory[:, -1] = 1.0
 
-    def _fill_memory_matrix(self):
-        self.memory_matrix[:-1, :] = self.memory_matrix[1:, :]
-        self.memory_matrix[-1, :] = self.pred_policy
+    def _fill_policy_memory(self):
+        self.policy_memory[:-1, :] = self.policy_memory[1:, :]
+        self.policy_memory[-1, :] = self.pred_policy
 
     def _init_similarity_matrix(self):
         self.similarity_matrix.fill(0.0)
@@ -108,7 +108,7 @@ class ContextManager(object):
 
         if self.done:
             self.true_action = -1
-            self._init_memory_matrix()
+            self._init_policy_memory()
             self._init_similarity_matrix()
         else:
             self.true_action = self.record.true_action - self.window_head
@@ -116,7 +116,7 @@ class ContextManager(object):
                 self.done = True
                 self.true_action = -1
             else:
-                self._fill_memory_matrix()
+                self._fill_policy_memory()
 
                 pred_action = np.argmax(self.pred_policy)
                 if pred_action == self.num_actions - 1:
@@ -153,7 +153,7 @@ class ContextManager(object):
 
         self.true_action = -1
         self._init_pred_policy()
-        self._init_memory_matrix()
+        self._init_policy_memory()
         self._fill_similarity_matrix()
 
         if return_info:

@@ -6,7 +6,7 @@ import unittest
 from gym import spaces
 import numpy as np
 
-from measure_following_game.environment import *
+from measure_following_game.environment.utils import *
 
 
 class EnvTest(unittest.TestCase):
@@ -36,10 +36,10 @@ class EnvTest(unittest.TestCase):
         self.assertEqual(similarity_matrix.shape, env.manager.window_shape)
         self.assertEqual(similarity_matrix.dtype, np.float32)
 
-        memory_matrix = observation_space[1]
-        self.assertIsInstance(memory_matrix, spaces.Box)
-        self.assertEqual(memory_matrix.shape, env.manager.memory_shape)
-        self.assertEqual(memory_matrix.dtype, np.float32)
+        policy_memory = observation_space[1]
+        self.assertIsInstance(policy_memory, spaces.Box)
+        self.assertEqual(policy_memory.shape, env.manager.memory_shape)
+        self.assertEqual(policy_memory.dtype, np.float32)
 
 
 if __name__ == "__main__":
